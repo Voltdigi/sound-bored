@@ -43,6 +43,29 @@ export class SoundEngine {
     if (this.volumeNode) this.volumeNode.gain.value = this.volume;
   }
 
+  /** Decodes an uploaded audio file into a reusable AudioBuffer. */
+  async decodeFile(file: File): Promise<AudioBuffer> {
+    const ctx = this.ensureCtx();
+    const arrayBuffer = await file.arrayBuffer();
+    return ctx.decodeAudioData(arrayBuffer);
+  }
+
+  /** Plays a decoded custom AudioBuffer. Cuts any previous sound. Returns duration in seconds. */
+  playBuffer(buffer: AudioBuffer): number {
+    const ctx = this.ensureCtx();
+    this.stopAll();
+    const master = ctx.createGain();
+    master.gain.value = 1;
+    master.connect(this.volumeNode!);
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(master);
+    src.start(ctx.currentTime);
+    src.stop(ctx.currentTime + buffer.duration + 0.05);
+    this.active = { sources: [src], master };
+    return buffer.duration;
+  }
+
   getVolume(): number {
     return this.volume;
   }

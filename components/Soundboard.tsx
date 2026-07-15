@@ -12,6 +12,11 @@ export interface Pad {
   sound: SoundKind;
 }
 
+export interface CustomSound {
+  buffer: AudioBuffer;
+  name: string;
+}
+
 export interface SoundboardProps {
   theme?: Theme;
   accent?: string;
@@ -155,6 +160,9 @@ export default function Soundboard({
   const [volume, setVolume] = useState(1);
   const [padList, setPadList] = useState<Pad[]>(pads);
   const [activeTheme, setActiveTheme] = useState<Theme>(theme);
+  const [customSounds, setCustomSounds] = useState<Record<number, CustomSound>>(
+    {}
+  );
 
   useEffect(() => {
     engineRef.current = new SoundEngine();
@@ -176,7 +184,10 @@ export default function Soundboard({
   const onPress = (i: number) => {
     let dur = 0.5;
     try {
-      dur = engineRef.current?.play(padList[i].sound) ?? 0.5;
+      const custom = customSounds[i];
+      dur = custom
+        ? engineRef.current?.playBuffer(custom.buffer) ?? 0.5
+        : engineRef.current?.play(padList[i].sound) ?? 0.5;
     } catch {
       /* noop */
     }
@@ -190,6 +201,27 @@ export default function Soundboard({
     setPadList((list) =>
       list.map((p, i) => (i === index ? { ...p, label } : p))
     );
+  };
+
+  const uploadCustomSound = async (index: number, file: File) => {
+    if (!engineRef.current) return;
+    try {
+      const buffer = await engineRef.current.decodeFile(file);
+      setCustomSounds((sounds) => ({
+        ...sounds,
+        [index]: { buffer, name: file.name },
+      }));
+    } catch {
+      /* invalid/unsupported audio file, ignore */
+    }
+  };
+
+  const clearCustomSound = (index: number) => {
+    setCustomSounds((sounds) => {
+      const next = { ...sounds };
+      delete next[index];
+      return next;
+    });
   };
 
   const stopAll = () => {
@@ -475,6 +507,9 @@ export default function Soundboard({
         onLabelChange={updatePadLabel}
         onPreview={onPress}
         playingIndex={playingIndex}
+        customSounds={customSounds}
+        onUploadSound={uploadCustomSound}
+        onClearSound={clearCustomSound}
       />
     </div>
   );

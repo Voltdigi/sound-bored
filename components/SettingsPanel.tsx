@@ -1,6 +1,6 @@
 "use client";
 
-import { themeConf, type Pad, type Theme } from "./Soundboard";
+import { themeConf, type CustomSound, type Pad, type Theme } from "./Soundboard";
 
 export type SettingsTab = "audio" | "sounds" | "themes";
 
@@ -85,6 +85,9 @@ export interface SettingsPanelProps {
   onLabelChange: (index: number, label: string) => void;
   onPreview: (index: number) => void;
   playingIndex: number | null;
+  customSounds: Record<number, CustomSound>;
+  onUploadSound: (index: number, file: File) => void;
+  onClearSound: (index: number) => void;
 }
 
 export default function SettingsPanel({
@@ -102,6 +105,9 @@ export default function SettingsPanel({
   onLabelChange,
   onPreview,
   playingIndex,
+  customSounds,
+  onUploadSound,
+  onClearSound,
 }: SettingsPanelProps) {
   if (!open) return null;
   const c = panelConf(theme);
@@ -308,57 +314,135 @@ export default function SettingsPanel({
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {pads.map((pad, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    border: `1px solid ${c.rowBorder}`,
-                    background: playingIndex === i ? c.navActiveBg : c.rowBg,
-                    borderRadius: 10,
-                    padding: "6px 6px 6px 12px",
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={pad.label}
-                    onChange={(e) => onLabelChange(i, e.target.value)}
-                    maxLength={20}
-                    aria-label={`Label for sound ${i + 1}`}
+              {pads.map((pad, i) => {
+                const custom = customSounds[i];
+                return (
+                  <div
+                    key={i}
                     style={{
-                      flex: 1,
-                      minWidth: 0,
-                      border: "none",
-                      background: "transparent",
-                      outline: "none",
-                      fontFamily: "var(--font-space-grotesk), sans-serif",
-                      fontWeight: 600,
-                      fontSize: 12.5,
-                      color: c.text,
-                      padding: "5px 0",
-                    }}
-                  />
-                  <button
-                    onClick={() => onPreview(i)}
-                    style={{
-                      flex: "none",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 5,
                       border: `1px solid ${c.rowBorder}`,
-                      background: "transparent",
-                      cursor: "pointer",
-                      borderRadius: 7,
-                      padding: "6px 10px",
-                      fontFamily: "var(--font-space-grotesk), sans-serif",
-                      fontWeight: 600,
-                      fontSize: 11,
-                      color: c.subText,
+                      background: playingIndex === i ? c.navActiveBg : c.rowBg,
+                      borderRadius: 10,
+                      padding: "6px 6px 6px 12px",
                     }}
                   >
-                    {playingIndex === i ? "Playing…" : "Preview"}
-                  </button>
-                </div>
-              ))}
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    >
+                      <input
+                        type="text"
+                        value={pad.label}
+                        onChange={(e) => onLabelChange(i, e.target.value)}
+                        maxLength={20}
+                        aria-label={`Label for sound ${i + 1}`}
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          border: "none",
+                          background: "transparent",
+                          outline: "none",
+                          fontFamily: "var(--font-space-grotesk), sans-serif",
+                          fontWeight: 600,
+                          fontSize: 12.5,
+                          color: c.text,
+                          padding: "5px 0",
+                        }}
+                      />
+                      <label
+                        style={{
+                          flex: "none",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          border: `1px solid ${c.rowBorder}`,
+                          background: "transparent",
+                          cursor: "pointer",
+                          borderRadius: 7,
+                          padding: "6px 10px",
+                          fontFamily: "var(--font-space-grotesk), sans-serif",
+                          fontWeight: 600,
+                          fontSize: 11,
+                          color: c.subText,
+                        }}
+                      >
+                        Upload
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) onUploadSound(i, file);
+                            e.target.value = "";
+                          }}
+                          style={{ display: "none" }}
+                        />
+                      </label>
+                      <button
+                        onClick={() => onPreview(i)}
+                        style={{
+                          flex: "none",
+                          border: `1px solid ${c.rowBorder}`,
+                          background: "transparent",
+                          cursor: "pointer",
+                          borderRadius: 7,
+                          padding: "6px 10px",
+                          fontFamily: "var(--font-space-grotesk), sans-serif",
+                          fontWeight: 600,
+                          fontSize: 11,
+                          color: c.subText,
+                        }}
+                      >
+                        {playingIndex === i ? "Playing…" : "Preview"}
+                      </button>
+                    </div>
+                    {custom && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          paddingRight: 4,
+                          paddingBottom: 2,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily:
+                              "var(--font-space-mono), monospace",
+                            fontSize: 10.5,
+                            color: c.subText,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            maxWidth: 260,
+                          }}
+                        >
+                          custom: {custom.name}
+                        </span>
+                        <button
+                          onClick={() => onClearSound(i)}
+                          style={{
+                            flex: "none",
+                            border: "none",
+                            background: "transparent",
+                            cursor: "pointer",
+                            color: c.subText,
+                            fontFamily:
+                              "var(--font-space-grotesk), sans-serif",
+                            fontWeight: 600,
+                            fontSize: 10.5,
+                            textDecoration: "underline",
+                          }}
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
