@@ -153,6 +153,7 @@ export default function Soundboard({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("audio");
   const [volume, setVolume] = useState(1);
+  const [padList, setPadList] = useState<Pad[]>(pads);
 
   useEffect(() => {
     engineRef.current = new SoundEngine();
@@ -174,7 +175,7 @@ export default function Soundboard({
   const onPress = (i: number) => {
     let dur = 0.5;
     try {
-      dur = engineRef.current?.play(pads[i].sound) ?? 0.5;
+      dur = engineRef.current?.play(padList[i].sound) ?? 0.5;
     } catch {
       /* noop */
     }
@@ -182,6 +183,12 @@ export default function Soundboard({
     setPlayingIndex(i);
     if (clearTimer.current) clearTimeout(clearTimer.current);
     clearTimer.current = setTimeout(() => setPlayingIndex(null), dur * 1000);
+  };
+
+  const updatePadLabel = (index: number, label: string) => {
+    setPadList((list) =>
+      list.map((p, i) => (i === index ? { ...p, label } : p))
+    );
   };
 
   const stopAll = () => {
@@ -316,9 +323,9 @@ export default function Soundboard({
           marginTop: 12,
         }}
       >
-        {pads.map((pad, i) => (
+        {padList.map((pad, i) => (
           <div
-            key={pad.label + i}
+            key={i}
             style={{
               display: "flex",
               flexDirection: "column",
@@ -461,7 +468,8 @@ export default function Soundboard({
         onTabChange={setSettingsTab}
         volume={volume}
         onVolumeChange={setVolume}
-        pads={pads}
+        pads={padList}
+        onLabelChange={updatePadLabel}
         onPreview={onPress}
         playingIndex={playingIndex}
       />

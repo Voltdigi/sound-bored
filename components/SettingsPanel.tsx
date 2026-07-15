@@ -77,6 +77,7 @@ export interface SettingsPanelProps {
   volume: number;
   onVolumeChange: (v: number) => void;
   pads: Pad[];
+  onLabelChange: (index: number, label: string) => void;
   onPreview: (index: number) => void;
   playingIndex: number | null;
 }
@@ -91,6 +92,7 @@ export default function SettingsPanel({
   volume,
   onVolumeChange,
   pads,
+  onLabelChange,
   onPreview,
   playingIndex,
 }: SettingsPanelProps) {
@@ -249,29 +251,55 @@ export default function SettingsPanel({
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {pads.map((pad, i) => (
-                <button
-                  key={pad.label + i}
-                  onClick={() => onPreview(i)}
+                <div
+                  key={i}
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
+                    gap: 8,
                     border: `1px solid ${c.rowBorder}`,
                     background: playingIndex === i ? c.navActiveBg : c.rowBg,
                     borderRadius: 10,
-                    padding: "9px 12px",
-                    cursor: "pointer",
-                    fontFamily: "var(--font-space-grotesk), sans-serif",
-                    fontWeight: 600,
-                    fontSize: 12.5,
-                    color: c.text,
+                    padding: "6px 6px 6px 12px",
                   }}
                 >
-                  <span>{pad.label}</span>
-                  <span style={{ color: c.subText, fontSize: 11 }}>
+                  <input
+                    type="text"
+                    value={pad.label}
+                    onChange={(e) => onLabelChange(i, e.target.value)}
+                    maxLength={20}
+                    aria-label={`Label for sound ${i + 1}`}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      border: "none",
+                      background: "transparent",
+                      outline: "none",
+                      fontFamily: "var(--font-space-grotesk), sans-serif",
+                      fontWeight: 600,
+                      fontSize: 12.5,
+                      color: c.text,
+                      padding: "5px 0",
+                    }}
+                  />
+                  <button
+                    onClick={() => onPreview(i)}
+                    style={{
+                      flex: "none",
+                      border: `1px solid ${c.rowBorder}`,
+                      background: "transparent",
+                      cursor: "pointer",
+                      borderRadius: 7,
+                      padding: "6px 10px",
+                      fontFamily: "var(--font-space-grotesk), sans-serif",
+                      fontWeight: 600,
+                      fontSize: 11,
+                      color: c.subText,
+                    }}
+                  >
                     {playingIndex === i ? "Playing…" : "Preview"}
-                  </span>
-                </button>
+                  </button>
+                </div>
               ))}
             </div>
           )}
