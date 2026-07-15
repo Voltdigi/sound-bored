@@ -2,6 +2,11 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { SoundEngine, type SoundKind } from "@/lib/sounds";
+import {
+  deleteCustomSound,
+  loadCustomSounds,
+  saveCustomSound,
+} from "@/lib/soundStorage";
 import SettingsPanel, { type SettingsTab } from "@/components/SettingsPanel";
 
 export type Theme = "Arcade" | "Neon" | "Pastel";
@@ -24,6 +29,8 @@ export interface SoundboardProps {
   /** Override the default pad set (label / hue / sound). */
   pads?: Pad[];
 }
+
+const PAD_LABELS_KEY = "soundbored:padLabels";
 
 const DEFAULT_PADS: Pad[] = [
   { label: "Airhorn", hue: 14, sound: "airhorn" },
@@ -163,6 +170,7 @@ export default function Soundboard({
   const [customSounds, setCustomSounds] = useState<Record<number, CustomSound>>(
     {}
   );
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     engineRef.current = new SoundEngine();
@@ -181,6 +189,59 @@ export default function Soundboard({
     engineRef.current?.setVolume(volume);
   }, [volume]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLabels = () => {
+      try {
+        const stored = window.localStorage.getItem(PAD_LABELS_KEY);
+        if (!stored) return;
+        const labels: string[] = JSON.parse(stored);
+        setPadList((list) =>
+          list.map((p, i) =>
+            typeof labels[i] === "string" && labels[i]
+              ? { ...p, label: labels[i] }
+              : p
+          )
+        );
+      } catch {
+        /* malformed or unavailable storage, keep defaults */
+      }
+    };
+
+    const loadSounds = async () => {
+      const engine = engineRef.current;
+      if (!engine) return;
+      try {
+        const stored = await loadCustomSounds();
+        const entries: Record<number, CustomSound> = {};
+        for (const item of stored) {
+          try {
+            const buffer = await engine.decodeFile(item.blob);
+            entries[item.index] = { buffer, name: item.name };
+          } catch {
+            /* skip corrupt/unreadable stored entry */
+          }
+        }
+        if (!cancelled) setCustomSounds((prev) => ({ ...entries, ...prev }));
+      } catch {
+        /* indexeddb unavailable, keep session-only sounds */
+      }
+    };
+
+    loadLabels();
+    // Minimum visible time so the loading shimmer reads as intentional
+    // rather than a one-frame flash on fast cache lookups.
+    const minDelay = new Promise((resolve) => setTimeout(resolve, 260));
+    Promise.all([loadSounds(), minDelay]).then(() => {
+      if (!cancelled) setHydrated(true);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const onPress = (i: number) => {
     let dur = 0.5;
     try {
@@ -198,9 +259,18 @@ export default function Soundboard({
   };
 
   const updatePadLabel = (index: number, label: string) => {
-    setPadList((list) =>
-      list.map((p, i) => (i === index ? { ...p, label } : p))
-    );
+    setPadList((list) => {
+      const next = list.map((p, i) => (i === index ? { ...p, label } : p));
+      try {
+        window.localStorage.setItem(
+          PAD_LABELS_KEY,
+          JSON.stringify(next.map((p) => p.label))
+        );
+      } catch {
+        /* storage unavailable (private mode, quota, etc.) */
+      }
+      return next;
+    });
   };
 
   const uploadCustomSound = async (index: number, file: File) => {
@@ -211,6 +281,9 @@ export default function Soundboard({
         ...sounds,
         [index]: { buffer, name: file.name },
       }));
+      saveCustomSound(index, file.name, file).catch(() => {
+        /* persistence failed, sound still works for this session */
+      });
     } catch {
       /* invalid/unsupported audio file, ignore */
     }
@@ -221,6 +294,9 @@ export default function Soundboard({
       const next = { ...sounds };
       delete next[index];
       return next;
+    });
+    deleteCustomSound(index).catch(() => {
+      /* noop */
     });
   };
 
@@ -379,7 +455,13 @@ export default function Soundboard({
               <button
                 onClick={() => onPress(i)}
                 aria-label={pad.label}
-                style={tileStyle(pad.hue, conf, playingIndex === i, accent)}
+                style={{
+                  ...tileStyle(pad.hue, conf, playingIndex === i, accent),
+                  animation: hydrated
+                    ? "padSettle .38s cubic-bezier(.16,1,.3,1) both"
+                    : undefined,
+                  animationDelay: hydrated ? `${i * 25}ms` : undefined,
+                }}
                 onPointerDown={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.transform =
                     "scale(.92)";
@@ -417,6 +499,29 @@ export default function Soundboard({
                     }}
                   />
                 )}
+                {!hydrated && (
+                  <span
+                    aria-hidden
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      overflow: "hidden",
+                      borderRadius: "inherit",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    <span
+                      style={{
+                        position: "absolute",
+                        inset: "-20% -60%",
+                        background:
+                          "linear-gradient(75deg, transparent 35%, rgba(255,255,255,.4) 50%, transparent 65%)",
+                        transform: "translateX(-100%)",
+                        animation: "shimmerSweep 1.1s ease-in-out infinite",
+                      }}
+                    />
+                  </span>
+                )}
               </button>
             </div>
             {showLabels && (
@@ -436,7 +541,32 @@ export default function Soundboard({
                   textOverflow: "ellipsis",
                 }}
               >
-                {pad.label}
+                {hydrated ? (
+                  <span
+                    style={{
+                      display: "inline-block",
+                      animation: "labelIn .3s ease both",
+                      animationDelay: `${i * 25}ms`,
+                    }}
+                  >
+                    {pad.label}
+                  </span>
+                ) : (
+                  <span
+                    aria-hidden
+                    style={{
+                      display: "inline-block",
+                      width: "58%",
+                      height: 9,
+                      borderRadius: 5,
+                      verticalAlign: "middle",
+                      background:
+                        "linear-gradient(90deg, rgba(120,120,120,.18) 25%, rgba(120,120,120,.36) 37%, rgba(120,120,120,.18) 63%)",
+                      backgroundSize: "400% 100%",
+                      animation: "shimmer 1.15s ease-in-out infinite",
+                    }}
+                  />
+                )}
               </div>
             )}
           </div>

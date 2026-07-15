@@ -43,8 +43,8 @@ export class SoundEngine {
     if (this.volumeNode) this.volumeNode.gain.value = this.volume;
   }
 
-  /** Decodes an uploaded audio file into a reusable AudioBuffer. */
-  async decodeFile(file: File): Promise<AudioBuffer> {
+  /** Decodes an uploaded audio file (or stored blob) into a reusable AudioBuffer. */
+  async decodeFile(file: Blob): Promise<AudioBuffer> {
     const ctx = this.ensureCtx();
     const arrayBuffer = await file.arrayBuffer();
     return ctx.decodeAudioData(arrayBuffer);
