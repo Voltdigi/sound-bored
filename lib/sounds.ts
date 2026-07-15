@@ -19,6 +19,8 @@ interface ActiveVoice {
 export class SoundEngine {
   private ctx: AudioContext | null = null;
   private active: ActiveVoice | null = null;
+  private volumeNode: GainNode | null = null;
+  private volume = 1;
 
   private ensureCtx(): AudioContext {
     if (!this.ctx) {
@@ -27,9 +29,22 @@ export class SoundEngine {
         (window as unknown as { webkitAudioContext: typeof AudioContext })
           .webkitAudioContext;
       this.ctx = new Ctor();
+      this.volumeNode = this.ctx.createGain();
+      this.volumeNode.gain.value = this.volume;
+      this.volumeNode.connect(this.ctx.destination);
     }
     if (this.ctx.state === "suspended") this.ctx.resume();
     return this.ctx;
+  }
+
+  /** Sets master output volume, 0..1. */
+  setVolume(v: number): void {
+    this.volume = Math.min(1, Math.max(0, v));
+    if (this.volumeNode) this.volumeNode.gain.value = this.volume;
+  }
+
+  getVolume(): number {
+    return this.volume;
   }
 
   private noiseBuffer(dur: number): AudioBuffer {
@@ -71,7 +86,7 @@ export class SoundEngine {
     const now = ctx.currentTime;
     const master = ctx.createGain();
     master.gain.value = 0.0001;
-    master.connect(ctx.destination);
+    master.connect(this.volumeNode!);
     const sources: AudioScheduledSourceNode[] = [];
     const P = master.gain;
     let dur = 0.5;

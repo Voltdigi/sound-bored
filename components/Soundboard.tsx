@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { SoundEngine, type SoundKind } from "@/lib/sounds";
+import SettingsPanel, { type SettingsTab } from "@/components/SettingsPanel";
 
 export type Theme = "Arcade" | "Neon" | "Pastel";
 
@@ -120,6 +121,24 @@ function tileStyle(
   return merged;
 }
 
+function GearIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+    </svg>
+  );
+}
+
 export default function Soundboard({
   theme = "Arcade",
   accent = "#ff3b6b",
@@ -131,6 +150,9 @@ export default function Soundboard({
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const [flash, setFlash] = useState<Record<number, number>>({});
   const [isPortrait, setIsPortrait] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>("audio");
+  const [volume, setVolume] = useState(1);
 
   useEffect(() => {
     engineRef.current = new SoundEngine();
@@ -144,6 +166,10 @@ export default function Soundboard({
       engineRef.current?.stopAll();
     };
   }, []);
+
+  useEffect(() => {
+    engineRef.current?.setVolume(volume);
+  }, [volume]);
 
   const onPress = (i: number) => {
     let dur = 0.5;
@@ -190,17 +216,38 @@ export default function Soundboard({
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          <div
-            style={{
-              fontFamily: "var(--font-archivo), system-ui, sans-serif",
-              fontWeight: 900,
-              fontSize: 22,
-              lineHeight: 1,
-              letterSpacing: "-.01em",
-              color: conf.title,
-            }}
-          >
-            SOUNDBORED
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div
+              style={{
+                fontFamily: "var(--font-archivo), system-ui, sans-serif",
+                fontWeight: 900,
+                fontSize: 22,
+                lineHeight: 1,
+                letterSpacing: "-.01em",
+                color: conf.title,
+              }}
+            >
+              SOUNDBORED
+            </div>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Open settings"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 24,
+                height: 24,
+                border: "none",
+                borderRadius: 7,
+                background: "transparent",
+                color: conf.sub,
+                cursor: "pointer",
+                padding: 0,
+              }}
+            >
+              <GearIcon size={15} />
+            </button>
           </div>
           <div
             style={{
@@ -404,6 +451,20 @@ export default function Soundboard({
           </div>
         </div>
       )}
+
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        theme={conf.name}
+        accent={accent}
+        activeTab={settingsTab}
+        onTabChange={setSettingsTab}
+        volume={volume}
+        onVolumeChange={setVolume}
+        pads={pads}
+        onPreview={onPress}
+        playingIndex={playingIndex}
+      />
     </div>
   );
 }
