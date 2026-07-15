@@ -1,0 +1,39 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #f7f2ea;
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: #e88ca0;
+  text-decoration: none;
+}
+a:hover {
+  color: #f2a9b8;
+}
+
+@keyframes padflash {
+  0% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes rotatehint {
+  0%,
+  100% {
+    transform: rotate(-12deg);
+  }
+  50% {
+    transform: rotate(78deg);
+  }
+}
