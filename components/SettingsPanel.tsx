@@ -1,8 +1,10 @@
 "use client";
 
-import type { Pad, Theme } from "./Soundboard";
+import { themeConf, type Pad, type Theme } from "./Soundboard";
 
-export type SettingsTab = "audio" | "sounds";
+export type SettingsTab = "audio" | "sounds" | "themes";
+
+const THEMES: Theme[] = ["Arcade", "Neon", "Pastel"];
 
 interface PanelConf {
   backdrop: string;
@@ -65,6 +67,7 @@ function panelConf(theme: Theme): PanelConf {
 const NAV_ITEMS: { key: SettingsTab; label: string }[] = [
   { key: "audio", label: "Audio" },
   { key: "sounds", label: "Sounds" },
+  { key: "themes", label: "Themes" },
 ];
 
 export interface SettingsPanelProps {
@@ -76,6 +79,8 @@ export interface SettingsPanelProps {
   onTabChange: (tab: SettingsTab) => void;
   volume: number;
   onVolumeChange: (v: number) => void;
+  activeTheme: Theme;
+  onThemeChange: (theme: Theme) => void;
   pads: Pad[];
   onLabelChange: (index: number, label: string) => void;
   onPreview: (index: number) => void;
@@ -91,6 +96,8 @@ export default function SettingsPanel({
   onTabChange,
   volume,
   onVolumeChange,
+  activeTheme,
+  onThemeChange,
   pads,
   onLabelChange,
   onPreview,
@@ -207,7 +214,11 @@ export default function SettingsPanel({
                 color: c.text,
               }}
             >
-              {activeTab === "audio" ? "Audio" : "Sounds"}
+              {activeTab === "audio"
+                ? "Audio"
+                : activeTab === "sounds"
+                ? "Sounds"
+                : "Themes"}
             </div>
             <button
               onClick={onClose}
@@ -247,6 +258,53 @@ export default function SettingsPanel({
                 onChange={(e) => onVolumeChange(Number(e.target.value) / 100)}
                 style={{ accentColor: accent, width: "100%" }}
               />
+            </div>
+          ) : activeTab === "themes" ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {THEMES.map((t) => {
+                const tc = themeConf(t);
+                const isActive = t === activeTheme;
+                return (
+                  <button
+                    key={t}
+                    onClick={() => onThemeChange(t)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      textAlign: "left",
+                      cursor: "pointer",
+                      border: isActive
+                        ? `2px solid ${accent}`
+                        : `1px solid ${c.rowBorder}`,
+                      background: isActive ? c.navActiveBg : c.rowBg,
+                      borderRadius: 10,
+                      padding: isActive ? "8px 11px" : "9px 12px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 30,
+                        height: 30,
+                        flex: "none",
+                        borderRadius: 8,
+                        background: tc.stage,
+                        border: "1px solid rgba(0,0,0,.12)",
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontFamily: "var(--font-space-grotesk), sans-serif",
+                        fontWeight: 600,
+                        fontSize: 12.5,
+                        color: c.text,
+                      }}
+                    >
+                      {t}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

@@ -39,7 +39,7 @@ interface ThemeConf {
   label: string;
 }
 
-function themeConf(theme: Theme): ThemeConf {
+export function themeConf(theme: Theme): ThemeConf {
   if (theme === "Neon")
     return {
       name: "Neon",
@@ -154,6 +154,7 @@ export default function Soundboard({
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("audio");
   const [volume, setVolume] = useState(1);
   const [padList, setPadList] = useState<Pad[]>(pads);
+  const [activeTheme, setActiveTheme] = useState<Theme>(theme);
 
   useEffect(() => {
     engineRef.current = new SoundEngine();
@@ -197,7 +198,7 @@ export default function Soundboard({
     setPlayingIndex(null);
   };
 
-  const conf = themeConf(theme);
+  const conf = themeConf(activeTheme);
 
   return (
     <div
@@ -468,6 +469,8 @@ export default function Soundboard({
         onTabChange={setSettingsTab}
         volume={volume}
         onVolumeChange={setVolume}
+        activeTheme={activeTheme}
+        onThemeChange={setActiveTheme}
         pads={padList}
         onLabelChange={updatePadLabel}
         onPreview={onPress}
